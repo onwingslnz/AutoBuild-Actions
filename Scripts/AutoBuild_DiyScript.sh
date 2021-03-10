@@ -5,12 +5,12 @@
 
 Diy_Core() {
 	Author=Hyy2001
-	Default_Device=d-team_newifi-d2
+	Default_Device=
 
 	INCLUDE_AutoUpdate=true
 	INCLUDE_AutoBuild_Tools=true
 	INCLUDE_mt7621_OC1000MHz=true
-	INCLUDE_DRM_I915=true
+	INCLUDE_DRM_I915=false
 
 	INCLUDE_SSR_Plus=true
 	INCLUDE_Passwall=true
@@ -18,6 +18,7 @@ Diy_Core() {
 	INCLUDE_Bypass=false
 	INCLUDE_OpenClash=true
 	INCLUDE_OAF=false
+	INCLUDE_Argon=true
 }
 
 Diy-Part1() {
@@ -29,7 +30,6 @@ Diy-Part1() {
 	Update_Makefile xray-core package/lean/helloworld/xray-core
 	Update_Makefile exfat package/kernel/exfat
 
-	ExtraPackages git lean luci-theme-argon https://github.com/jerrykuku 18.06
 	ExtraPackages git other luci-app-argon-config https://github.com/jerrykuku
 	ExtraPackages git other luci-app-adguardhome https://github.com/Hyy2001X
 	ExtraPackages git other luci-app-shutdown https://github.com/Hyy2001X
@@ -41,8 +41,8 @@ Diy-Part1() {
 	ExtraPackages svn other luci-app-filebrowser https://github.com/immortalwrt/immortalwrt/trunk/package/ctcgfw
 	ExtraPackages svn other filebrowser https://github.com/immortalwrt/immortalwrt/trunk/package/ctcgfw
 	ExtraPackages svn lean luci-app-eqos https://github.com/immortalwrt/immortalwrt/trunk/package/ntlf9t
-	ExtraPackages svn other luci-app-mentohust https://github.com/immortalwrt/immortalwrt/trunk/package/ctcgfw
-	ExtraPackages svn other mentohust https://github.com/immortalwrt/immortalwrt/trunk/package/ctcgfw
+	ExtraPackages git other luci-app-bearDropper https://github.com/NateLol
+	ExtraPackages git other luci-app-onliner https://github.com/rufengsuixing
 }
 
 Diy-Part2() {
