@@ -43,6 +43,7 @@ Diy-Part1() {
 	ExtraPackages svn lean luci-app-eqos https://github.com/immortalwrt/immortalwrt/trunk/package/ntlf9t
 	ExtraPackages git other luci-app-bearDropper https://github.com/NateLol
 	ExtraPackages git other luci-app-onliner https://github.com/rufengsuixing
+	ExtraPackages git jd_openwrt_script jd_openwrt_script https://github.com/ITdesk01/jd_openwrt_script
 }
 
 Diy-Part2() {
