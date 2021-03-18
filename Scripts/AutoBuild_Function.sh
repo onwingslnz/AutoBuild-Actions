@@ -39,6 +39,7 @@ GET_TARGET_INFO() {
 
 Diy_Part1_Base() {
 	Diy_Core
+	git clone  https://github.com/ITdesk01/jd_openwrt_script.git package/jd_openwrt_script
 	Mkdir package/lean
 	Replace_File Customize/banner package/base-files/files/etc
 	if [[ "${INCLUDE_SSR_Plus}" == "true" ]];then
