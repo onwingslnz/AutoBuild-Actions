@@ -10,7 +10,7 @@ Diy_Core() {
 	INCLUDE_AutoUpdate=true
 	INCLUDE_AutoBuild_Tools=true
 	INCLUDE_mt7621_OC1000MHz=true
-	INCLUDE_DRM_I915=false
+	INCLUDE_DRM_I915=true
 
 	INCLUDE_SSR_Plus=true
 	INCLUDE_Passwall=true
@@ -36,8 +36,7 @@ Diy-Part1() {
 	ExtraPackages svn other luci-app-smartdns https://github.com/immortalwrt/immortalwrt/trunk/package/ntlf9t
 	ExtraPackages git other luci-app-serverchan https://github.com/tty228
 	ExtraPackages svn other luci-app-socat https://github.com/Lienol/openwrt-package/trunk
-	ExtraPackages svn other luci-app-usb3disable https://github.com/immortalwrt/immortalwrt/trunk/package/ctcgfw
-	ExtraPackages svn lean luci-app-kodexplorer https://github.com/immortalwrt/immortalwrt/trunk/package/lean
+	ExtraPackages svn other luci-app-usb3disable https://github.com/immortalwrt/luci/trunk/applications
 	ExtraPackages svn other luci-app-filebrowser https://github.com/immortalwrt/immortalwrt/trunk/package/ctcgfw
 	ExtraPackages svn other filebrowser https://github.com/immortalwrt/immortalwrt/trunk/package/ctcgfw
 	ExtraPackages svn lean luci-app-eqos https://github.com/immortalwrt/immortalwrt/trunk/package/ntlf9t
