@@ -25,7 +25,7 @@ on:
 
 env:
   REPO_URL: https://github.com/coolsnowwolf/lede
-  CONFIG_FILE: Configs/newifi.config
+  CONFIG_FILE: Configs/d-team_newifi-d2.config
   DIY_SCRIPT: Scripts/AutoBuild_DiyScript.sh
   FUNCTION_SCRIPT: Scripts/AutoBuild_Function.sh
   UPLOAD_RELEASE: true
