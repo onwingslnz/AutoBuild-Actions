@@ -8,9 +8,9 @@ GET_TARGET_INFO() {
 	Home=${GITHUB_WORKSPACE}/openwrt
 	[ -f ${GITHUB_WORKSPACE}/Openwrt.info ] && . ${GITHUB_WORKSPACE}/Openwrt.info
 	Owner_Repo="$(grep "https://github.com/[a-zA-Z0-9]" ${GITHUB_WORKSPACE}/.git/config | cut -c8-100)"
-	AB_Firmware_Info=${GITHUB_WORKSPACE}/openwrt/package/base-files/files/etc/openwrt_info
 	Source_Repo="$(grep "https://github.com/[a-zA-Z0-9]" ${Home}/.git/config | cut -c8-100)"
 	Source_Owner="$(echo "${Source_Repo}" | egrep -o "[a-z]+" | awk 'NR==4')"
+	AB_Firmware_Info=package/base-files/files/etc/openwrt_info
 	case ${Source_Owner} in
 	coolsnowwolf)
 		Version_File="package/lean/default-settings/files/zzz-default-settings"
@@ -50,50 +50,60 @@ GET_TARGET_INFO() {
 	TARGET_SUBTARGET="$(awk -F '[="]+' '/TARGET_SUBTARGET/{print $2}' .config)"
 }
 
-Diy_Part1_Base() {
-	Diy_Core
+Firmware-Diy_Base() {
+	GET_TARGET_INFO
+	Auto_ExtraPackages
+	chmod +x -R ${GITHUB_WORKSPACE}/Scripts
+	chmod +x -R ${GITHUB_WORKSPACE}/CustomFiles
 	if [[ "${INCLUDE_AutoBuild_Tools}" == "true" ]];then
 		Replace_File Scripts/AutoBuild_Tools.sh package/base-files/files/bin
 	fi
-}
-
-Diy_Part2_Base() {
-	GET_TARGET_INFO
-
-	Replace_File Customize/Depends/banner package/base-files/files/etc
 	if [[ "${INCLUDE_AutoUpdate}" == "true" ]];then
 		ExtraPackages git lean luci-app-autoupdate https://github.com/Hyy2001X main
 		Replace_File Scripts/AutoUpdate.sh package/base-files/files/bin
-		AutoUpdate_Version=$(awk 'NR==6' package/base-files/files/bin/AutoUpdate.sh | awk -F '[="]+' '/Version/{print $2}')
-		sed -i "s?Openwrt?Openwrt ${Openwrt_Version} / AutoUpdate ${AutoUpdate_Version}?g" package/base-files/files/etc/banner
-	else
-		sed -i "s?Openwrt?Openwrt ${Openwrt_Version}?g" package/base-files/files/etc/banner
 	fi
+	if [ -f package/base-files/files/bin/AutoUpdate.sh ];then
+		AutoUpdate_Version=$(awk 'NR==6' package/base-files/files/bin/AutoUpdate.sh | awk -F '[="]+' '/Version/{print $2}')
+	else
+		AutoUpdate_Version=OFF
+	fi
+
 	case ${Source_Owner} in
 	coolsnowwolf)
-		Replace_File Customize/Depends/cpuinfo_x86 package/lean/autocore/files/x86/sbin cpuinfo
+		Replace_File CustomFiles/Depends/coremark_lede.sh package/lean/coremark coremark.sh
+		Replace_File CustomFiles/Depends/profile_lede package/base-files/files/etc profile
+		Replace_File CustomFiles/Depends/cpuinfo_x86 package/lean/autocore/files/x86/sbin cpuinfo
+
 		ExtraPackages git lean luci-theme-argon https://github.com/jerrykuku 18.06
 		ExtraPackages git lean helloworld https://github.com/fw876 master
 		Update_Makefile xray-core package/lean/helloworld/xray-core
 		sed -i 's/143/143,8080/' package/lean/helloworld/luci-app-ssr-plus/root/etc/init.d/shadowsocksr
-		Replace_File Customize/Depends/coremark_lede.sh package/lean/coremark coremark.sh
-		ExtraPackages svn other/../../feeds/packages/admin netdata https://github.com/openwrt/packages/trunk/admin
-
 		sed -i "s?iptables?#iptables?g" ${Version_File} > /dev/null 2>&1
 		sed -i "s?${Old_Version}?${Old_Version} Compiled by ${Author} [${Display_Date}]?g" $Version_File
 
-		if [[ "${INCLUDE_DRM_I915}" == "true" ]];then
-			Replace_File Customize/Depends/config-5.4 target/linux/x86
-		fi
+		[[ "${INCLUDE_DRM_I915}" == "true" ]] && Replace_File CustomFiles/Depends/config-5.4 target/linux/x86
 	;;
 	immortalwrt)
 		sed -i 's/143/143,8080/' package/lean/luci-app-ssr-plus/root/etc/init.d/shadowsocksr
-		Replace_File Customize/Depends/coremark_ImmortalWrt.sh package/base-files/files/etc coremark.sh
-		Replace_File Customize/Depends/ImmortalWrt package/base-files/files/etc openwrt_release
+		Replace_File CustomFiles/Depends/coremark_ImmortalWrt.sh package/base-files/files/etc coremark.sh
+		Replace_File CustomFiles/Depends/ImmortalWrt package/base-files/files/etc openwrt_release
 		sed -i "s?Template?Compiled by ${Author} [${Display_Date}]?g" $Version_File
 	;;
-	*)
+	openwrt)
 		ExtraPackages git other luci-theme-argon https://github.com/jerrykuku
+	;;
+	esac
+	
+	case ${Source_Owner} in
+	immortalwrt)
+		Replace_File CustomFiles/Depends/banner package/lean/default-settings/files openwrt_banner
+		sed -i "s?By?By ${Author}?g" package/lean/default-settings/files/openwrt_banner
+		sed -i "s?Openwrt?ImmortalWrt ${Openwrt_Version} / AutoUpdate ${AutoUpdate_Version}?g" package/lean/default-settings/files/openwrt_banner
+	;;
+	*)
+		Replace_File CustomFiles/Depends/banner package/base-files/files/etc
+		sed -i "s?By?By ${Author}?g" package/base-files/files/etc/banner
+		sed -i "s?Openwrt?Openwrt ${Openwrt_Version} / AutoUpdate ${AutoUpdate_Version}?g" package/base-files/files/etc/banner
 	;;
 	esac
 
@@ -110,7 +120,7 @@ Diy_Part2_Base() {
 	echo "Source Github: ${Source_Repo}"
 }
 
-Diy_Part3_Base() {
+PS_Firmware() {
 	GET_TARGET_INFO
 	case ${Source_Owner} in
 	immortalwrt)
@@ -186,6 +196,16 @@ PKG_Finder() {
 	fi
 }
 
+Auto_ExtraPackages() {
+	[[ ! -f "${GITHUB_WORKSPACE}/CustomPackages/${TARGET_PROFILE}" ]] && return
+	echo "CustomFile: ${TARGET_PROFILE} is detected !"
+	cat ${GITHUB_WORKSPACE}/CustomPackages/${TARGET_PROFILE} | while read X
+	do
+		ExtraPackages ${X}
+	done
+	echo "Done !"
+}
+
 ExtraPackages() {
 	PKG_PROTO=${1}
 	PKG_DIR=${2}
@@ -233,7 +253,7 @@ Replace_File() {
 			echo "[$(date "+%H:%M:%S")] Moving [${_TYPE2}] ${FILE_NAME} to ${2}/${FILE_RENAME} ..."
 			mv -f ${GITHUB_WORKSPACE}/${FILE_NAME} ${PATCH_DIR}/${_RENAME}
 		else
-			echo "[$(date "+%H:%M:%S")] Customize ${_TYPE2} [${FILE_NAME}] is not detected,skip move ..."
+			echo "[$(date "+%H:%M:%S")] CustomFiles ${_TYPE2} [${FILE_NAME}] is not detected,skip move ..."
 		fi
 	fi
 	unset FILE_NAME PATCH_DIR FILE_RENAME
