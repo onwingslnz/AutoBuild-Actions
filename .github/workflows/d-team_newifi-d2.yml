@@ -77,15 +77,18 @@ jobs:
         echo "Display_Date=$(date +'%Y/%m/%d')" >> $GITHUB_WORKSPACE/Openwrt.info
         echo "## $(date +"%Y%m%d")-$CONFIG_FILE" > update_log.txt
         echo "Artifacts_DATE=$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
+
     - name: Clone source code
       run: |
         git clone -b $REPO_BRANCH $REPO_URL openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
+
     - name: Update & Install all feeds
       run: |
         cd openwrt
         ./scripts/feeds update -a
         ./scripts/feeds install -a
+
     - name: Run [Firmware-Diy] Scripts
       run: |
         chmod +x $DIY_SCRIPT
@@ -95,6 +98,7 @@ jobs:
         source $GITHUB_WORKSPACE/$DIY_SCRIPT
         source $GITHUB_WORKSPACE/$FUNCTION_SCRIPT && Firmware-Diy_Base
         Firmware-Diy
+
     - name: SSH connection to Actions
       uses: P3TERX/ssh2actions@v1.0.0
       if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') || contains(github.event.action, 'ssh')
@@ -110,15 +114,18 @@ jobs:
         make defconfig
         make download -j$(nproc) V=s
         find dl -size -1024c -exec rm -f {} \;
+
     - name: Compile the Openwrt
       run: |
         cd openwrt
         make -j$(nproc) || make -j1 V=s
+
     - name: Process the AutoBuild Firmware
       run: |
         cd openwrt
         source $GITHUB_WORKSPACE/$DIY_SCRIPT
         source $GITHUB_WORKSPACE/$FUNCTION_SCRIPT && PS_Firmware
+
     - name: Upload AutoBuild Firmware to Artifacts
       uses: actions/upload-artifact@main
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
