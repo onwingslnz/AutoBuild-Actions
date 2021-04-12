@@ -14,6 +14,8 @@ GET_TARGET_INFO() {
 	if [[ ! ${Current_Branch} == master ]];then
 		Current_Branch="$(echo ${Current_Branch} | egrep -o "[0-9]+.[0-9]+")"
 		Openwrt_Version_="R${Current_Branch}-"
+	else
+		Openwrt_Version_="R18.06-"
 	fi
 	AB_Firmware_Info=package/base-files/files/etc/openwrt_info
 	case ${Source_Owner} in
@@ -30,7 +32,13 @@ GET_TARGET_INFO() {
 		Openwrt_Version="${Openwrt_Version_}${Compile_Date}"
 	;;
 	esac
-	x86_Test="$(egrep -o "CONFIG_TARGET.*DEVICE.*=y" .config | sed -r 's/CONFIG_TARGET_(.*)_DEVICE_(.*)=y/\1/')"
+	while [[ -z "${x86_Test}" ]]
+	do
+		x86_Test="$(egrep -o "CONFIG_TARGET.*DEVICE.*=y" .config | sed -r 's/CONFIG_TARGET_(.*)_DEVICE_(.*)=y/\1/')"
+		[[ ! -z "${x86_Test}" ]] && break
+		x86_Test="$(egrep -o "CONFIG_TARGET.*Generic=y" .config | sed -r 's/CONFIG_TARGET_(.*)_Generic=y/\1/')"
+		[[ -z "${x86_Test}" ]] && TIME "Can not obtain the TARGET_PROFILE !" && exit 1
+	done
 	if [[ "${x86_Test}" == "x86_64" ]];then
 		TARGET_PROFILE="x86_64"
 	else
@@ -60,6 +68,7 @@ GET_TARGET_INFO() {
 	echo "TARGET_BOARD=${TARGET_BOARD}" >> ${Home}/TARGET_INFO
 	echo "TARGET_SUBTARGET=${TARGET_SUBTARGET}" >> ${Home}/TARGET_INFO
 	echo "Home=${Home}" >> ${Home}/TARGET_INFO
+	echo "Current_Branch=${Current_Branch}" >> ${Home}/TARGET_INFO
 	
 	echo "${Openwrt_Version}" > ${AB_Firmware_Info}
 	echo "${Owner_Repo}" >> ${AB_Firmware_Info}
@@ -92,6 +101,29 @@ Firmware-Diy_Base() {
 		ExtraPackages git lean luci-app-autoupdate https://github.com/Hyy2001X main
 		Replace_File Scripts/AutoUpdate.sh package/base-files/files/bin
 	fi
+	if [[ "${INCLUDE_Theme_Argon}" == "true" ]];then
+		case ${Source_Owner} in
+		coolsnowwolf)
+				ExtraPackages git lean luci-theme-argon https://github.com/jerrykuku 18.06
+		;;
+		*)
+			case ${Current_Branch} in
+			19.07)
+				ExtraPackages git other luci-theme-argon https://github.com/jerrykuku v2.2.5
+			;;
+			21.02)
+				ExtraPackages git other luci-theme-argon https://github.com/jerrykuku
+			;;
+			18.06)
+				ExtraPackages git other luci-theme-argon https://github.com/jerrykuku 18.06
+			;;
+			*)
+				TIME "[ERROR] Unknown source branch: [${Current_Branch}] !"
+			;;
+			esac
+		;;
+		esac
+	fi
 	if [ -f package/base-files/files/bin/AutoUpdate.sh ];then
 		AutoUpdate_Version=$(awk 'NR==6' package/base-files/files/bin/AutoUpdate.sh | awk -F '[="]+' '/Version/{print $2}')
 	else
@@ -103,7 +135,6 @@ Firmware-Diy_Base() {
 	coolsnowwolf)
 		Replace_File CustomFiles/Depends/coremark_lede.sh package/lean/coremark coremark.sh
 		Replace_File CustomFiles/Depends/cpuinfo_x86 package/lean/autocore/files/x86/sbin cpuinfo
-		ExtraPackages git lean luci-theme-argon https://github.com/jerrykuku 18.06
 		ExtraPackages git lean helloworld https://github.com/fw876 master
 		Update_Makefile xray-core package/lean/helloworld/xray-core
 		sed -i 's/143/143,8080/' package/lean/helloworld/luci-app-ssr-plus/root/etc/init.d/shadowsocksr
@@ -118,9 +149,6 @@ Firmware-Diy_Base() {
 		Replace_File CustomFiles/Depends/cpuinfo_x86 package/lean/autocore/files/x86/sbin cpuinfo
 		sed -i "s?Template?Compiled by ${Author} [${Display_Date}]?g" $Version_File
 		[[ "${INCLUDE_DRM_I915}" == "true" ]] && Replace_File CustomFiles/Depends/i915-4.19 target/linux/x86 config-4.19
-	;;
-	openwrt)
-		[[ "${INCLUDE_DRM_I915}" == "true" ]] && Replace_File CustomFiles/Depends/i915-4.14 target/linux/x86 config-4.14
 	;;
 	esac
 	
@@ -139,22 +167,26 @@ Firmware-Diy_Base() {
 
 	if [[ "${INCLUDE_Obsolete_PKG_Compatible}" == "true" ]];then
 		TIME "Start to run Obsolete_Package_Compatible Scripts ..."
-		case ${Current_Branch} in
-		19.07 | 21.02)
-			Replace_File CustomFiles/Patches/0003-upx-ucl-${Current_Branch}.patch ./
-			cat 0003-upx-ucl-${Current_Branch}.patch | patch -p1 > /dev/null 2>&1
-			ExtraPackages svn ../feeds/packages/lang golang https://github.com/coolsnowwolf/packages/trunk/lang
+		if [[ ${Source_Owner} == openwrt ]];then
+			case ${Current_Branch} in
+			19.07 | 21.02)
+				Replace_File CustomFiles/Patches/0003-upx-ucl-${Current_Branch}.patch ./
+				cat 0003-upx-ucl-${Current_Branch}.patch | patch -p1 > /dev/null 2>&1
+				ExtraPackages svn ../feeds/packages/lang golang https://github.com/coolsnowwolf/packages/trunk/lang
 		
-			TIME "Start to convert zh-cn translation files to zh_Hans ..."
-			Replace_File Scripts/Convert_Translation.sh package
-			cd ./package
-			bash ./Convert_Translation.sh
-			cd ..
-		;;
-		*)
-			TIME "[ERROR] Current branch: [${Current_Branch}] is not supported !"
-		;;
-		esac
+				TIME "Start to convert zh-cn translation files to zh_Hans ..."
+				Replace_File Scripts/Convert_Translation.sh package
+				cd ./package
+				bash ./Convert_Translation.sh
+				cd ..
+			;;
+			*)
+				TIME "[ERROR] Current branch: [${Current_Branch}] is not supported !"
+			;;
+			esac
+		else
+			TIME "[ERROR] Current source: [${Source_Owner}] is not supported !"
+		fi
 	fi
 }
 
@@ -164,11 +196,25 @@ PS_Firmware() {
 	case ${Source_Owner} in
 	immortalwrt)
 		_Firmware=immortalwrt
-		_Legacy_Firmware=combined-squashfs
-		_EFI_Firmware=uefi-gpt-squashfs
 	;;
 	*)
 		_Firmware=openwrt
+	;;
+	esac
+	case ${Current_Branch} in
+	19.07 | 18.06)
+		case ${Source_Owner} in
+		immortalwrt)
+			_Legacy_Firmware=combined-squashfs
+			_EFI_Firmware=uefi-gpt-squashfs
+		;;
+		*)
+			_Legacy_Firmware=combined-squashfs
+			_EFI_Firmware=combined-squashfs-efi
+		;;
+		esac
+	;;
+	*)
 		_Legacy_Firmware=generic-squashfs-combined
 		_EFI_Firmware=generic-squashfs-combined-efi
 	;;
@@ -217,9 +263,9 @@ PS_Firmware() {
 			_MD5=$(md5sum bin/Firmware/${AutoBuild_Firmware} | cut -d ' ' -f1)
 			_SHA256=$(sha256sum bin/Firmware/${AutoBuild_Firmware} | cut -d ' ' -f1)
 			echo -e "\nMD5:${_MD5}\nSHA256:${_SHA256}" > bin/Firmware/${AutoBuild_Detail}
-			TIME "Common Firmware is detected !"
+			TIME "Firmware is detected !"
 		else
-			TIME "[ERROR] Common Firmware is not detected !"
+			TIME "[ERROR] Firmware is not detected !"
 		fi
 	;;
 	esac
@@ -274,7 +320,7 @@ ExtraPackages() {
 	REPO_BRANCH=${5}
 
 	if [[ $# -lt 4 ]];then
-		TIME "[ERROR] Missing options,skip check out..."
+		TIME "[ERROR] [$#] Missing options,skip check out..."
 		return
 	fi
 	Mkdir package/${PKG_DIR}
