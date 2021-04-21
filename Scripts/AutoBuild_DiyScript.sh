@@ -6,6 +6,7 @@
 Diy_Core() {
 	Author=Hyy2001
 	Default_Device=x86_64
+	Short_Firmware_Date=true
 
 	INCLUDE_AutoUpdate=true
 	INCLUDE_AutoBuild_Tools=true
@@ -15,7 +16,8 @@ Diy_Core() {
 }
 
 Firmware-Diy() {
-	Update_Makefile exfat package/kernel/exfat
+	Update_Makefile exfat $(PKG_Finder d package exfat)
+	ExtraPackages svn ../feeds/packages/admin netdata https://github.com/openwrt/packages/trunk/admin
 
 	case ${TARGET_PROFILE} in
 	d-team_newifi-d2)
