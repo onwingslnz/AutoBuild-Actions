@@ -5,7 +5,7 @@
 
 测试通过的设备: `d-team_newifi-d2(bin)`、`x86_64(img、img.gz)`
 
-测试通过的源码: `coolsnowwolf/lede:master`、`immortalwrt/immortalwrt:all`、`openwrt/openwrt:!lede-17.01`
+测试通过的源码: `coolsnowwolf/lede:master`、`immortalwrt/immortalwrt`、`openwrt/openwrt`
 
 ## 部署环境(STEP 1):
 
@@ -19,7 +19,7 @@
 
 4. 点击上方菜单中的`Settings`,依次点击`Secrets`-`New repository secret`
 
-   其中`Name`项填写`GITHUB_TOKEN`,然后将你的 **Token** 粘贴到`Value`项,完成后点击`Add secert`
+   其中`Name`项随意填写,然后将你的 **Token** 粘贴到`Value`项,完成后点击`Add secert`
 
 ## 定制固件(STEP 2):
 
@@ -35,33 +35,35 @@
 
    **软件包列表** 编辑`CustomPackages`下对应**设备名称**的文件,按照现有语法为**特定设备**添加软件包
 
-**AutoBuild_DiyScript.sh: Diy_Core() 的赋值解释:**
+**AutoBuild_DiyScript.sh: Diy_Core() 函数中的变量解释:**
 ```
    Author 作者名称,这个名称将在 OpenWrt 首页显示
 
    Default_Device 设备的官方名称,例如 [d-team_newifi-d2]、[x86_64]
    
    Short_Firmware_Date 固件日期样式,当设置为 true: [20210420] false: [202104202359]
+   
+   Default_IP_Address 固件后台 IP 地址,默认为 [192.168.1.1]
 
    INCLUDE_AutoUpdate 启用后,将自动添加 Scripts/AutoUpdate.sh 和 luci-app-autoupdate 到固件
 
    INCLUDE_AutoBuild_Tools 添加 Scripts/AutoBuild_Tools.sh 到固件
 
-   INCLUDE_DRM_I915 添加 Intel Graphics 驱动(仅部分平台可用)
+   INCLUDE_DRM_I915 自动启用 Intel Graphics 驱动 (测试特性)
 
-   INCLUDE_Theme_Argon 自动识别并添加适用源码的 luci-theme-argon 主题包
+   INCLUDE_Theme_Argon 自动添加适用于当前源码的 luci-theme-argon 主题
 
-   INCLUDE_Obsolete_PKG_Compatible 优化原生 OpenWrt-19.07、21.02 支持(测试特性)
+   INCLUDE_Obsolete_PKG_Compatible 优化原生 OpenWrt-19.07、21.02 支持 (测试特性)
 ```
 **其他指令:** 编辑`Scripts/AutoBuild_DiyScript.sh`,参照下方语法:
 ```
-   [使用 git clone 拉取文件]  ExtraPackages git 存放位置 软件包名 仓库地址 分支
+   [使用 git clone 拉取文件]  AddPackage git 存放位置 软件包名 仓库地址 分支
 
-   [使用 svn co 拉取文件]  ExtraPackages svn 存放位置 软件包名 仓库地址/branches/分支/路径
+   [使用 svn co 拉取文件]  AddPackage svn 存放位置 软件包名 仓库地址/branches/分支/路径
 
    [替换 /CustomFiles 文件到源码] Replace_File 文件(夹)名称 目标路径 新名称[可选]
    
-   [查找文件/文件夹] PKG_Finder f/d(意为 文件/文件夹) 文件(夹)名称 查找路径
+   [查找文件/文件夹] PKG_Finder f/d(文件/文件夹) 文件(夹)名称 查找路径
 ```
 ## 编译固件(STEP 3):
 
@@ -73,17 +75,23 @@
    
    **SSH 连接** 使用方法参见 [P3TERX's Blog](https://p3terx.com/archives/build-openwrt-with-github-actions.html)
 
-## 使用一键更新固件脚本:
+## 使用固件更新脚本:
 
    首先需要打开`TTYD 终端`或者在浏览器输入`IP地址:7681`,按需输入下方指令:
    
-   检查并更新固件(保留配置): `bash /bin/AutoUpdate.sh`
+   检查并更新固件(保留配置): `AutoUpdate`或`autoupdate`
 
-   检查并更新固件(不保留配置): `bash /bin/AutoUpdate.sh -n`
+   检查并更新固件(不保留配置): `AutoUpdate -n`
    
-   更多使用方法: `bash /bin/AutoUpdate.sh -help`
+   查看更多使用方法: `AutoUpdate -help`
    
-   **注意: 一键更新固件需要在 Diy-Core() 函数中启用`INCLUDE_AutoUpdate`**
+   **注意: 该功能需要在 Diy-Core() 函数中设置`INCLUDE_AutoUpdate`为`true`**
+
+## 使用固件工具箱:
+   
+   打开`TTYD 终端`,输入`Tools`或`tools`,请自行摸索,功能持续开发中...
+
+   **注意: 该功能需要在 Diy-Core() 函数中设置`INCLUDE_AutoBuild_Tools`为`true`**
    
 ## 鸣谢
 
