@@ -3,7 +3,7 @@
 # AutoBuild Module by Hyy2001
 # AutoBuild_Tools for Openwrt
 
-Version=V1.2.3
+Version=V1.2.5
 
 AutoBuild_Tools() {
 while :
@@ -15,6 +15,7 @@ do
 	echo "2. Samba 一键共享"
 	echo "3. 软件包安装"
 	echo "4. 查找文件(夹)"
+	echo "5. 端口占用列表"
 	echo "u. 固件更新"
 	echo -e "\nx. 更新脚本"
 	echo -e "q. 退出\n"
@@ -77,6 +78,12 @@ do
 		done
 		echo -e "\n开始从 [${_Path}] 中查找 [${_Name}],请耐心等待 ...\n"
 		PKG_Finder ${_Type} ${_Path} ${_Name}
+		Enter
+	;;
+	5)
+		clear
+		echo -e "端口		服务名称\n"
+		netstat -tanp | egrep ":::[0-9].+|0.0.0.0:[0-9]+|127.0.0.1:[0-9]+" | awk '{print $4"\t     "$7}' | sed -r 's/:::/\1/' | sed -r 's/0.0.0.0:/\1/' | sed -r 's/127.0.0.1:/\1/'| sed -r 's/[0-9]+.\//\1/' | sort | uniq
 		Enter
 	;;
 	esac
@@ -341,7 +348,7 @@ do
 	echo "3. 不保留配置更新固件 [全新安装]"
 	echo "4. 列出固件信息"
 	echo "5. 清除固件下载缓存"
-	echo "6. 更改 Github API 地址"
+	echo "6. 更改 Github 地址"
 	echo "7. 指定 x86 设备下载 UEFI/Legacy 引导的固件"
 	echo -e "\nx. 更新 [AutoUpdate] 脚本"
 	echo -e "q. 返回\n"
@@ -351,13 +358,7 @@ do
 		break
 	;;
 	x)
-		wget -q ${Github_Raw}/Scripts/AutoUpdate.sh -O ${AutoBuild_Tools_Temp}/AutoUpdate.sh
-		[[ $? == 0 ]] && {
-			echo -e "\n脚本更新成功!"
-			rm -f /bin/AutoUpdate.sh
-			mv -f ${AutoBuild_Tools_Temp}/AutoUpdate.sh /bin
-			chmod +x /bin/AutoUpdate.sh
-		} || echo -e "\n脚本更新失败!"
+		bash /bin/AutoUpdate.sh -x
 		sleep 2
 	;;
 	1)
@@ -375,7 +376,7 @@ do
 	;;
 	5)
 		bash /bin/AutoUpdate.sh -d
-		sleep 1
+		sleep 2
 	;;
 	6)
 		echo ""
