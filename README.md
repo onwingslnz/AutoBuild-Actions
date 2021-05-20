@@ -31,31 +31,33 @@
 
    **更换源码与分支** 修改`第 30 行 REPO_URL:`为源码仓库地址,`第 31 行`为分支 (可选)
 
-4. 按照需求编辑`Scripts/AutoBuild_DiyScript.sh`文件的 **Firmware-Diy() 函数**
+4. 按照需求编辑并定制`Scripts/AutoBuild_DiyScript.sh`文件
 
-   **注意: 定制固件建议只修改 AutoBuild_DiyScript.sh 文件,而不是修改 AutoBuild_Function.sh**
+   **注意: 为了更方便地同步我的改动,不建议修改 Scripts/AutoBuild_Function.sh 文件**
 
-   **软件包列表** 编辑`CustomPackages`目录下对应**设备名称**的文件,按照现有语法为**特定设备**添加软件包 (可选)
+   **第三方软件包列表** 编辑`CustomPackages`目录下对应**设备名称**的文件,按照现有语法为该设备添加第三方软件包 (可选)
 
 **AutoBuild_DiyScript.sh: Diy_Core() 函数中的变量解释:**
 ```
-   Author 作者名称,若该项留空将自动设置为你的 Github 用户名
+   Author 作者名称,若该项留空将自动获取
 
-   Default_Device 设备的官方名称,例如 d-team_newifi-d2、x86_64
+   Default_Device 设备的 TARGET_PROFILE 名称,例如 d-team_newifi-d2、x86_64
    
    Short_Firmware_Date 固件日期样式,当设置为 true: [20210501] false: [202105012300]
    
-   Default_IP_Address 固件 LAN IP 地址,默认为: [192.168.1.1] false: [不做任何修改]
+   Default_IP_Address 固件 LAN IP 地址,默认为: [192.168.1.1] false/留空: [不修改]
 
    INCLUDE_AutoUpdate 启用后,将自动添加 Scripts/AutoUpdate.sh 和 luci-app-autoupdate 到固件
 
    INCLUDE_AutoBuild_Tools 添加 AutoBuild 工具箱: AutoBuild_Tools.sh 到固件
 
-   INCLUDE_DRM_I915 自动启用 Intel Graphics 驱动 (测试特性)
+   INCLUDE_DRM_I915 自动勾选 Intel Graphics 驱动 (测试特性)
 
    INCLUDE_Theme_Argon 自动添加适用于当前源码的 luci-theme-argon 主题
 
    INCLUDE_Obsolete_PKG_Compatible 优化原生 OpenWrt-19.07、21.02 支持 (测试特性)
+
+   Upload_VM_Firmware 上传虚拟磁盘 vmdk vhdx vdi 固件到 Release (仅支持 x86_64)
    
    注: 若要启用某项功能,请将该值修改为 true,禁用某项功能则修改为 false 或留空
 ```
@@ -77,25 +79,27 @@
 
    **手动编译** 点击上方`Actions`,选择你要编译的设备名称,点击右方`Run workflow`,点击绿色按钮即可开始编译
    
-   **临时修改 IP 地址** 该功能仅在**手动编译**时生效,点击`Run workflow`后即可输入 IP 地址(优先级**高于** Diy_Core 函数)
+   **临时修改 IP 地址** 该功能仅在**手动编译**时生效,点击`Run workflow`后即可输入 IP 地址(优先级**高于** Diy_Core 中的定义)
 
    **SSH 连接** 使用方法参见 [P3TERX's Blog](https://p3terx.com/archives/build-openwrt-with-github-actions.html)
 
-## 使用固件更新脚本:
+## 使用 AutoUpdate 一键更新脚本:
 
    首先需要打开`TTYD 终端`或者在浏览器输入`IP 地址:7681`,按需输入下方指令:
 
-   检查并更新固件(保留配置),输入: `AutoUpdate`或`bash /bin/AutoUpdate.sh`
+   检查并更新固件(保留配置),输入: `autoupdate`或`bash /bin/AutoUpdate.sh`
 
-   更新固件(不保留配置): `AutoUpdate -n`
+   更新固件(FastGit 镜像加速): `autoupdate -p`
 
-   查看更多使用方法: `AutoUpdate -help`
+   更新固件(不保留配置): `autoupdate -n`或`autoupdate -np`
+
+   查看更多使用方法: `autoUpdate -h`
 
    **注意: 该功能需要在 Diy-Core() 函数中设置`INCLUDE_AutoUpdate`为`true`**
 
-## 使用固件工具箱:
+## 使用 AutoBuild 固件工具箱:
 
-   打开`TTYD 终端`,输入`Tools`或`tools`,请自行摸索,功能持续开发中...
+   打开`TTYD 终端`,输入`tools`或`bash /bin/AutoBuild_Tools.sh`,请自行摸索,功能持续开发中...
 
    **注意: 该功能需要在 Diy-Core() 函数中设置`INCLUDE_AutoBuild_Tools`为`true`**
 
