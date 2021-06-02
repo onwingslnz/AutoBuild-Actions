@@ -33,7 +33,7 @@ on:
 ### 环境变量设置
 env:
 # 设备名称
-  DEFAULT_TARGET: d-team_newifi-d2
+  DEFAULT_TARGET: newifi
 # 源码仓库:分支
   DEFAULT_SOURCE: coolsnowwolf/lede:master
 # 上传固件到 Github Releases
