@@ -12,10 +12,12 @@ GET_INFO() {
 	Openwrt_Author="$(echo "${Openwrt_Repo}" | cut -d "/" -f4)"
 	Openwrt_Repo_Name="$(echo "${Openwrt_Repo}" | cut -d "/" -f5)"
 	Openwrt_Branch="$(GET_BRANCH)"
-	[[ ! ${Openwrt_Branch} == master ]] && {
+	if [[ ${Openwrt_Branch} == master || -z ${Openwrt_Branch} ]];then
+		Openwrt_Version_="R$(date +%y.%m)-"
+	else
 		Openwrt_Branch="$(echo ${Openwrt_Branch} | egrep -o "[0-9]+.[0-9]+")"
-		Openwrt_Version_="R${Openwrt_Branch}-"
-	} || Openwrt_Version_="R$(date +%y.%m)-"
+		Openwrt_Version_="R${Openwrt_Branch}.0-"
+	fi
 	case "${Openwrt_Author}" in
 	coolsnowwolf)
 		Version_File=package/lean/default-settings/files/zzz-default-settings
@@ -34,15 +36,21 @@ GET_INFO() {
 		x86_Test="$(egrep -o "CONFIG_TARGET.*DEVICE.*=y" .config | sed -r 's/CONFIG_TARGET_(.*)_DEVICE_(.*)=y/\1/')"
 		[[ -n ${x86_Test} ]] && break
 		x86_Test="$(egrep -o "CONFIG_TARGET.*Generic=y" .config | sed -r 's/CONFIG_TARGET_(.*)_Generic=y/\1/')"
-		[[ -z ${x86_Test} ]] && TIME "[ERROR] Can not obtain the TARGET_PROFILE !" && exit 1
+		[[ -z ${x86_Test} ]] && TIME "[ERROR] Can not obtain the TARGET_PROFILE,please check!" && exit 1
 	done
 	[[ ${x86_Test} == x86_64 ]] && {
 		TARGET_PROFILE=x86_64
 	} || {
 		TARGET_PROFILE="$(egrep -o "CONFIG_TARGET.*DEVICE.*=y" .config | sed -r 's/.*DEVICE_(.*)=y/\1/')"
 	}
-	[[ -z ${TARGET_PROFILE} ]] && TARGET_PROFILE="${Default_Device}"
-	[[ -z ${Default_Device} ]] && Default_Device="${TARGET_PROFILE}"
+	[[ -z ${TARGET_PROFILE} ]] && {
+		if [[ -n ${Default_TARGET_PROFILE} && ${Default_TARGET_PROFILE} != auto ]];then
+			TARGET_PROFILE="${Default_TARGET_PROFILE}"
+		else
+			TIME "[ERROR] Can not obtain the TARGET_PROFILE,please check!"
+			exit 1
+		fi
+	}
 	[[ ${TARGET_PROFILE} == x86_64 ]] && {
 		[[ $(cat ${Home}/.config) =~ CONFIG_TARGET_IMAGES_GZIP=y ]] && Firmware_Type=img.gz || Firmware_Type=img 
 	}
@@ -92,7 +100,15 @@ GET_INFO() {
 		Egrep_Firmware='AutoBuild-${Openwrt_Repo_Name}-${TARGET_PROFILE}-R[0-9]+.[0-9]+.[0-9]+-[0-9]+-${x86_64_Boot}.[0-9a-z]+.${Firmware_Type}'
 	;;
 	*)
-		Default_Firmware="${Firmware_Head}-${TARGET_BOARD}-${TARGET_SUBTARGET}-${TARGET_PROFILE}-squashfs-sysupgrade.${Firmware_Type}"
+		case "${TARGET_SUBTARGET}" in
+		generic)
+			Default_Firmware="${Firmware_Head}-${TARGET_BOARD}-${TARGET_PROFILE}-squashfs-sysupgrade.${Firmware_Type}"
+		;;
+		*)
+			Default_Firmware="${Firmware_Head}-${TARGET_BOARD}-${TARGET_SUBTARGET}-${TARGET_PROFILE}-squashfs-sysupgrade.${Firmware_Type}"
+		;;
+		esac
+		
 		AutoBuild_Firmware='AutoBuild-${Openwrt_Repo_Name}-${TARGET_PROFILE}-${CURRENT_Version}-${SHA5BIT}.${Firmware_Type}'
 		Egrep_Firmware='AutoBuild-${Openwrt_Repo_Name}-${TARGET_PROFILE}-R[0-9]+.[0-9]+.[0-9]+.[0-9]+-[0-9a-z]+.${Firmware_Type}'
 	;;
@@ -112,7 +128,6 @@ Openwrt_Branch=${Openwrt_Branch}
 AutoBuild_Firmware=${AutoBuild_Firmware}
 Openwrt_Repo_Name=${Openwrt_Repo_Name}
 Egrep_Firmware=${Egrep_Firmware}
-FW_SAVE_PATH=/tmp/Downloads
 EOF
 	cat >> VARIABLE_FILE_Sec <<EOF
 INCLUDE_Obsolete_PKG_Compatible=${INCLUDE_Obsolete_PKG_Compatible}
@@ -145,7 +160,7 @@ Firmware-Diy_Base() {
 	mkdir -p package/base-files/files/etc/AutoBuild
 	[ -f VARIABLE_FILE_Main ] && cp VARIABLE_FILE_Main package/base-files/files/etc/AutoBuild/Default_Variable
 	Copy CustomFiles/Depends/Custom_Variable package/base-files/files/etc/AutoBuild
-	AddPackage_List ${GITHUB_WORKSPACE}/CustomPackages/Common
+	[[ ! "$(cat ${GITHUB_WORKSPACE}/Configs/${TARGET_PROFILE})" =~ "## DO NOT MERGE" ]] && AddPackage_List ${GITHUB_WORKSPACE}/CustomPackages/Common
 	AddPackage_List ${GITHUB_WORKSPACE}/CustomPackages/${TARGET_PROFILE}
 	chmod +x -R ${GITHUB_WORKSPACE}/Scripts
 	chmod 777 -R ${GITHUB_WORKSPACE}/CustomFiles
@@ -186,12 +201,6 @@ Firmware-Diy_Base() {
 			if [[ ! ${Default_LAN_IP} == ${Old_IP_Address} ]];then
 				TIME "Setting default IP Address to ${Default_LAN_IP} ..."
 				sed -i "s/${Old_IP_Address}/${Default_LAN_IP}/g" package/base-files/files/bin/config_generate
-				# a=$(echo ${Old_IP_Address} | egrep -o "[0-9]+.[0-9]+." | awk 'NR==1')
-				# b=$(echo ${Default_LAN_IP} | egrep -o "[0-9]+.[0-9]+." | awk 'NR==1')
-				# c="$(egrep -o ")).[0-9]+" package/base-files/files/bin/config_generate)"
-				# d=")).$(echo ${Default_LAN_IP} | egrep -o "[0-9]+" | awk 'END {print}')"
-				# sed -i "s/${a}/${b}/g" package/base-files/files/bin/config_generate
-				# sed -i "s/${c}/${d}/g" package/base-files/files/bin/config_generate
 			fi
 		else
 			TIME "[ERROR] ${Default_LAN_IP} is not an IP Address !"
@@ -213,7 +222,6 @@ Firmware-Diy_Base() {
 		AddPackage git other helloworld fw876 master
 		sed -i 's/143/143,8080/' $(PKG_Finder d package luci-app-ssr-plus)/root/etc/init.d/shadowsocksr
 		sed -i "s?iptables?#iptables?g" ${Version_File}
-		sed -i "s?ip6tables -t?#ip6tables -t?g" ${Version_File}
 		sed -i "s?${Old_Version}?${Old_Version} @ ${Author} [${Display_Date}]?g" ${Version_File}
 	;;
 	immortalwrt)
@@ -353,11 +361,13 @@ TIME() {
 }
 
 PKG_Finder() {
+	local Result
 	[[ $# -ne 3 ]] && {
-		TIME "[ERROR] Error options: [$#] [$*] !"
+		TIME "Usage: PKG_Finder <f | d> Search_Path Target_Name/Target_Path"
 		return 0
 	}
-	find $2 -name $3 -type $1 -depth -exec echo {} \;
+	Result=$(find $2 -name $3 -type $1 -depth -exec echo {} \;)
+	[[ -n ${Result} ]] && echo "${Result}"
 }
 
 AddPackage_List() {
@@ -369,8 +379,7 @@ AddPackage_List() {
 	[[ -s $1 ]] && {
 		TIME "Loading Custom Packages list: [$1]..."
 		cat $1 | sed '/^$/d' | while read X;do
-			[[ $* =~ "#" ]] && TIME "Skip check out: ${X}"
-			[[ -n ${X} && ! $* =~ "#" ]] && AddPackage ${X}
+			[[ -n ${X} && ! $* =~ '#' ]] && AddPackage ${X}
 		done
 	}
 }
@@ -386,6 +395,7 @@ AddPackage() {
 	PKG_NAME="$3"
 	REPO_URL="https://github.com/$4"
 	[[ -z $5 ]] && REPO_BRANCH=master || REPO_BRANCH="$5"
+	[[ ${REPO_URL} =~ "${Openwrt_Author}/${Openwrt_Repo_Name}" ]] && return 0
 
 	mkdir -p package/${PKG_DIR}
 	[[ -d package/${PKG_DIR}/${PKG_NAME} ]] && {
@@ -403,7 +413,7 @@ AddPackage() {
 		svn checkout ${REPO_URL}/${PKG_NAME} ${PKG_NAME} > /dev/null 2>&1
 	;;
 	esac
-	[[ -f ${PKG_NAME}/Makefile || -f ${PKG_NAME}/README* || -n $(ls -A ${PKG_NAME}) ]] && {
+	[[ -f ${PKG_NAME}/Makefile || -n $(ls -A ${PKG_NAME}) ]] && {
 		mv -f "${PKG_NAME}" "package/${PKG_DIR}"
 	}
 }
@@ -414,7 +424,7 @@ Copy() {
 		return 0
 	}
 	[[ ! -f ${GITHUB_WORKSPACE}/$1 ]] && [[ ! -d ${GITHUB_WORKSPACE}/$1 ]] && {
-		TIME "CustomFiles/${FILE_NAME} is not detected !"
+		TIME "CustomFiles/$1 is not detected !"
 		return 0
 	}
 	[[ ! -d ${GITHUB_WORKSPACE}/openwrt/$2 ]] && mkdir -p ${GITHUB_WORKSPACE}/openwrt/$2
