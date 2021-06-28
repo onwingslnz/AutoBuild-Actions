@@ -29,7 +29,7 @@ on:
 ### 环境变量设置
 env:
 # 设备名称 (可在 README 中找到获取方法)
-  TARGET_PROFILE: new_newifi
+  TARGET_PROFILE: newnewifi
 # 源码仓库:分支
   DEFAULT_SOURCE: coolsnowwolf/lede:master
 # 上传固件到 Github Releases
