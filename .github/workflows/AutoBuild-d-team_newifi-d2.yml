@@ -116,6 +116,7 @@ jobs:
         Firmware-Diy_Base
         source $GITHUB_WORKSPACE/openwrt/VARIABLE_FILE_Sec && Firmware-Diy
         rm -f .config && cp $GITHUB_WORKSPACE/Configs/$TARGET_PROFILE .config
+        cp $GITHUB_WORKSPACE/Configs/$TARGET_PROFILE openwrt/.config
         
     - name: SSH connection to Actions
       uses: P3TERX/ssh2actions@v1.0.0
